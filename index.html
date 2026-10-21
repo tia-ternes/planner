@@ -230,13 +230,13 @@ const SB_URL='https://vivuldhpwcjwsltccyct.supabase.co',SB_KEY='sb_publishable_Y
 let sb,usr=null,guest=false,authReady=false,acct='';
 const authOn=()=>authReady&&!usr&&!guest;
 function dl(n,d,ty){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d],{type:ty}));a.download=n;document.body.appendChild(a);a.click();a.remove()}
-async function doPush(){if(!sb||!usr)return;const t=S.upd||Date.now();S.upd=t;try{setSt('Syncing…');const{error}=await sb.from('planner_state').upsert({user_id:usr,data:JSON.parse(sj()),updated_at:new Date(t).toISOString()});if(error)throw error;sy.t=t;sy.retry=0;setSt('Synced')}catch(e){setSt('Sync paused. Retrying soon.');if(!sy.retry++)setTimeout(doPush,15000)}}
+async function doPush(){if(!sb||!usr)return;if(sy.busy){sy.again=1;return}sy.busy=1;const t=S.upd||Date.now();S.upd=t;try{setSt('Syncing…');const{error}=await sb.from('planner_state').upsert({user_id:usr,data:JSON.parse(sj()),updated_at:new Date(t).toISOString()});if(error)throw error;sy.t=t;sy.retry=0;setSt('Synced')}catch(e){console.error(e);setSt('Sync paused: '+((e&&(e.message||e.code||e.details))||'unknown error'));if(!sy.retry++)setTimeout(doPush,15000)}finally{sy.busy=0;if(sy.again){sy.again=0;doPush()}}}
 async function syncPull(){if(!sb||!usr||dr)return;try{const{data:r,error}=await sb.from('planner_state').select('data,updated_at').eq('user_id',usr).maybeSingle();if(error)throw error;
 if(!r){await doPush();return}const t=Date.parse(r.updated_at);
 if(t>(S.upd||0)){const o=r.data;if(!o||!o.spaces||!o.notes)return;const keep={};LOC.forEach(k=>keep[k]=S[k]);S=Object.assign(o,keep);
 if(!S.notes.some(x=>x.id===S.note))S.note=S.notes[0].id;if(!S.spaces.some(x=>x.id===S.space))S.space=S.spaces[0].id;
 S.upd=t;sy.last=sj();sy.t=t;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}render();setSt('Synced')}
-else if(t<(S.upd||0)&&t!==sy.t)await doPush();else setSt('Synced')}catch(e){setSt('Offline. Changes are saved on this device.')}}
+else if(t<(S.upd||0)&&t!==sy.t)await doPush();else setSt('Synced')}catch(e){console.error(e);setSt(navigator.onLine?'Sync check failed: '+((e&&(e.message||e.code))||'unknown error'):'Offline. Changes are saved on this device.')}}
 async function startSync(){setSt('Connecting…');await syncPull();if(sy.ch)sb.removeChannel(sy.ch);sy.ch=sb.channel('ps-'+usr).on('postgres_changes',{event:'*',schema:'public',table:'planner_state',filter:'user_id=eq.'+usr},()=>syncPull()).subscribe()}
 async function initSync(){try{sb=supabase.createClient(SB_URL,SB_KEY);const{data}=await sb.auth.getSession();const u=data.session&&data.session.user;usr=u?u.id:null;acct=u?u.email:'';authReady=true;sy.base=!!usr;render();if(usr)startSync();
 sb.auth.onAuthStateChange((ev,s)=>{const n=s&&s.user?s.user.id:null;if(n===usr)return;usr=n;acct=n?s.user.email:'';sy.base=!!n;if(!n&&sy.ch){sb.removeChannel(sy.ch);sy.ch=null}setSt(n?'Connecting…':'Signed out');render();if(n)startSync()})}catch(e){authReady=true;setSt('Local only');render()}}
