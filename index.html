@@ -107,6 +107,20 @@ li.lift{background:color-mix(in srgb,var(--ac) 14%,var(--sf));box-shadow:0 6px 1
 .wd{border:2px solid var(--line);border-radius:var(--rb);padding:6px;min-height:90px}.wd.sel{border-color:var(--ac)}
 .wh{background:none;border:0;font-weight:700;padding:4px 2px;min-height:36px;width:100%;text-align:center}.wh.today{color:var(--ac)}
 .we{display:flex;gap:6px;align-items:flex-start;font-size:.85rem;padding:2px 0;overflow-wrap:anywhere}.we b{width:8px;height:8px;border-radius:50%;flex:none;margin-top:6px}
+.wrap.nb{max-width:1280px;grid-template-columns:1fr;padding:12px 10px}
+.nb .panel{padding:10px}
+.nb nav{display:flex;gap:8px;align-items:center}
+.nb nav .lists{flex:1;flex-direction:row;overflow-x:auto}
+.nb nav>.btn{width:auto!important;margin:0!important;white-space:nowrap;flex:none}
+.nb .tools{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--sf);padding:8px 4px;margin:0 0 8px;border-bottom:2px solid var(--line)}
+.nb .desk{padding:clamp(4px,1.5vw,14px)}
+.nb #cv{max-width:none}
+.nb .desk{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tools .btn{padding:8px 12px}
+.fs .band,.fs .note,.fs .nb nav,.fs #ntitle,.fs .nbx{display:none}
+.fs .wrap.nb{max-width:none;padding:6px}
+.fs .panel{padding:6px;box-shadow:none;background:transparent}
+.fs .desk{padding:6px}
 </style>
 </head>
 <body>
@@ -138,8 +152,8 @@ if(!S.spaces.some(x=>x.kind==='today'))S.spaces.push(D.spaces[4]);
 S.spaces.forEach(x=>{if(!x.accent2)x.accent2=x.id==='p'?'#e64980':'#0b7285';(x.lists||[]).forEach(l=>{if(!l.ic)l.ic='✨'})})}
 S.notes.forEach(n=>{if(!n.pages){n.pages=[{strokes:n.strokes||[]}];delete n.strokes}n.pg=n.pg||0});
 S.spaces.sort((a,b)=>{const o=x=>({today:0,notes:3,cal:4})[x.kind]??(x.id==='p'?1:2);return o(a)-o(b)});
-let ed=null,srch=false,sheet=false,sure=0,snd={s:'p',l:''},cv,cx,W=0,dr=null,pick=false,sc=null,RT=1.294;
-const LOC=['space','note','tool','ink','size','finger','cal','cv','upd'],sj=()=>JSON.stringify(Object.fromEntries(Object.entries(S).filter(([k])=>!LOC.includes(k))));
+let ed=null,srch=false,sheet=false,sure=0,snd={s:'p',l:''},cv,cx,W=0,dr=null,pick=false,sc=null,RT=1.294,full=false,pts={},pz=null,scx=0;
+const LOC=['space','note','tool','ink','size','finger','cal','cv','zoom','upd'],sj=()=>JSON.stringify(Object.fromEntries(Object.entries(S).filter(([k])=>!LOC.includes(k))));
 const sy={st:'Local only',base:null,last:sj(),c:[],t:0,timer:0,retry:0};
 const save=()=>{const j=sj();if(j!==sy.last){S.upd=Date.now();sy.last=j;if(sy.base){clearTimeout(sy.timer);sy.timer=setTimeout(doPush,1500)}}try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const sp=()=>S.spaces.find(x=>x.id===S.space),isN=()=>sp().kind==='notes',isC=()=>sp().kind==='cal',isT=()=>sp().kind==='today';
@@ -163,19 +177,19 @@ ${l.items.length?`<ul>${l.items.map(i=>`<li class="${i.done?'done':''}" data-did
 <div class="meta"><span>${dn} of ${l.items.length} done</span><span>${dn?'<button class="btn ghost" data-act="clear">Clear done</button> ':''}<button class="btn ghost" data-act="edit" data-k="list" data-id="${l.id}">Rename</button> ${s.lists.length>1?`<button class="btn ghost" data-act="dlist">${sure===1?'Tap again to delete list':'Delete list'}</button>`:''}</span></div></section></div>`}}
 function notesView(){const n=nt(),tgt=S.spaces.filter(x=>x.lists),ts=tgt.find(x=>x.id===snd.s)||tgt[0];if(!ts.lists.some(l=>l.id===snd.l))snd.l=ts.lists[0].id;
 return{h:`<button class="emo" data-act="pick" aria-label="Change icon">${n.ic||'✏️'}</button>${esc(n.title||'Untitled')}`,sub:`${S.notes.length} notebook${S.notes.length>1?'s':''} · page ${n.pg+1} of ${n.pages.length}`,pct:0,
-body:`<div class="wrap"><nav aria-label="Notes"><div class="lists">${S.notes.map(x=>`<button class="chip" data-act="note" data-id="${x.id}" aria-current="${x.id===n.id}"><span>${x.ic||'📝'} ${esc(x.title||'Untitled')}</span></button>`).join('')}</div>
+body:`<div class="wrap nb"><nav aria-label="Notes"><div class="lists">${S.notes.map(x=>`<button class="chip" data-act="note" data-id="${x.id}" aria-current="${x.id===n.id}"><span>${x.ic||'📝'} ${esc(x.title||'Untitled')}</span></button>`).join('')}</div>
 <button class="btn ghost" style="margin-top:10px;width:100%" data-act="nnew">New notebook</button></nav>
 <section class="panel"><input type="text" id="ntitle" value="${esc(n.title)}" placeholder="Notebook title" aria-label="Notebook title" style="margin-bottom:12px">
 <div class="tools">${seg('tool',[['pen','Pen'],['mark','Marker'],['erase','Eraser']],S.tool)}
 ${INKS.map(c=>`<button class="dot" data-act="ink" data-v="${c}" style="background:${c}" aria-label="Ink ${c}" aria-pressed="${S.ink===c}"></button>`).join('')}
 ${seg('size',[[2,'S'],[4,'M'],[8,'L']],S.size)}${seg('paper',[['lined','Lined'],['grid','Grid'],['dots','Dots'],['blank','Blank']],n.paper)}
-<button class="btn ghost" data-act="undo">Undo</button><button class="btn ghost" data-act="edit" data-k="note" data-id="${n.id}">Rename</button><button class="btn ghost" data-act="nclear">${sure===2?'Tap again to clear':'Clear'}</button>
+<button class="btn ghost" data-act="undo">Undo</button><button class="btn ghost" data-act="zoom" data-v="-.5" aria-label="Zoom out">−</button><button class="btn ghost" data-act="zoom" data-v=".5" aria-label="Zoom in">+</button><button class="btn ghost" data-act="full">${full?'Exit full screen':'Full screen'}</button><button class="btn ghost" data-act="edit" data-k="note" data-id="${n.id}">Rename</button><button class="btn ghost" data-act="nclear">${sure===2?'Tap again to clear':'Clear'}</button>
 <button class="btn ghost" data-act="finger" aria-pressed="${S.finger}">Finger drawing: ${S.finger?'on':'off'}</button></div>
 <div class="desk"><canvas id="cv" aria-label="Handwriting canvas"></canvas></div><div class="row" style="justify-content:center"><button class="btn ghost" data-act="ppg" aria-label="Previous page">‹</button><span>Page ${n.pg+1} of ${n.pages.length}</span><button class="btn ghost" data-act="npg" aria-label="Next page">›</button><button class="btn ghost" data-act="addpg">Add page</button>${n.pages.length>1?'<button class="btn ghost" data-act="delpg">Delete page</button>':''}</div>
-<h3 style="margin:16px 0 6px">Text</h3><textarea id="ntext" placeholder="Typed or converted text appears here. On iPad you can also write here with Apple Pencil (Scribble).">${esc(n.text)}</textarea>
+<div class="nbx"><h3 style="margin:16px 0 6px">Text</h3><textarea id="ntext" placeholder="Typed or converted text appears here. On iPad you can also write here with Apple Pencil (Scribble).">${esc(n.text)}</textarea>
 <div class="row"><button class="btn" data-act="conv">Convert handwriting to text</button></div><p class="st" id="st" aria-live="polite"></p>
 <h3 style="margin:10px 0 6px">Send as checklist</h3><div class="row"><select id="ss" aria-label="Space">${tgt.map(x=>`<option value="${x.id}" ${x.id===ts.id?'selected':''}>${x.name}</option>`).join('')}</select>
-<select id="sl" aria-label="List">${ts.lists.map(l=>`<option value="${l.id}" ${l.id===snd.l?'selected':''}>${l.ic} ${esc(l.name)}</option>`).join('')}</select><button class="btn" data-act="send">Send</button></div></section></div>`}}
+<select id="sl" aria-label="List">${ts.lists.map(l=>`<option value="${l.id}" ${l.id===snd.l?'selected':''}>${l.ic} ${esc(l.name)}</option>`).join('')}</select><button class="btn" data-act="send">Send</button></div></div></section></div>`}}
 const EMO='✨ 🏡 🛒 💼 📌 🍳 📚 🎯 💡 🎨 🏋️ 🧘 🌿 🎁 ✈️ 🐶 🐱 🎵 ✏️ ✅ ⭐ ❤️ 🔥 🌈 ☕ 🍎 🥗 🛠️ 💰 📞 🎓 🚗 🧹 🌞 🌙 🎉'.split(' ');
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'],pd=n=>String(n).padStart(2,'0'),ds=(y,m,d)=>`${y}-${pd(m+1)}-${pd(d)}`;
 const tf=t=>t?new Date('2000-01-01T'+t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'All day';
@@ -245,7 +259,7 @@ if(!em||pw.length<6){er.textContent='Enter your email and a password of at least
 er.textContent='Working…';try{const r=up?await sb.auth.signUp({email:em,password:pw}):await sb.auth.signInWithPassword({email:em,password:pw});
 if(r.error)er.textContent=r.error.message;else if(up&&!r.data.session)er.textContent='Check your email to confirm, then sign in.'}catch(x){er.textContent='Couldn’t reach the server. Check your connection.'}}
 function authView(){return `<div class="back"></div><div class="sheet" style="inset:0;margin:auto;height:fit-content;max-width:380px;border-radius:var(--r)" role="dialog" aria-label="Sign in"><h2>Welcome to your planner</h2><p>Sign in to keep everything in sync across your devices.</p><form id="authf"><h3>Email</h3><input type="text" id="aem" inputmode="email" autocomplete="username" autocapitalize="off"><h3>Password</h3><input type="password" id="apw" autocomplete="current-password"><p id="aer" style="color:#e03131;min-height:1.4em;margin-top:8px"></p><div class="row"><button class="btn" data-m="in">Sign in</button><button class="btn ghost" data-m="up">Create account</button></div></form><button class="btn ghost" style="width:100%;margin-top:12px" data-act="guest">Continue without an account</button></div>`}
-function render(){theme();const s=sp(),v=isN()?notesView():isC()?calView():isT()?todayView():listsView();
+function render(){theme();document.documentElement.classList.toggle('fs',isN()&&full);const s=sp(),v=isN()?notesView():isC()?calView():isT()?todayView():listsView();
 $('#app').innerHTML=`<header class="band"><div class="in"><div class="top"><div class="tabs" role="tablist">${S.spaces.map(x=>`<button role="tab" data-act="space" data-id="${x.id}" aria-selected="${x.id===S.space}">${x.name}</button>`).join('')}</div>
 <span><button class="cu" data-act="srch">Search</button><button class="cu" data-act="cust">Customize</button></span></div><h1>${v.h}</h1><p class="sub">${v.sub}</p>${v.pct?`<div class="bar"><i style="width:${v.pct}%"></i></div>`:''}</div></header>${v.body}
 <p class="note">Saved on this device. Sync: <span class="sst">${sy.st}</span>. Meal planning, recipe import, and sharing come next.</p>
@@ -270,19 +284,19 @@ function seg1(c,s,w,a,b){c.lineCap=c.lineJoin='round';c.strokeStyle=s.c;c.global
 c.beginPath();c.moveTo(a[0]*w,a[1]*w);c.lineTo(b[0]*w,b[1]*w);c.stroke();c.globalAlpha=1}
 function stroke(c,s,w){const p=s.p;if(p.length===1)seg1(c,s,w,p[0],[p[0][0]+.0001,p[0][1]]);for(let i=1;i<p.length;i++)seg1(c,s,w,p[i-1],p[i])}
 function redraw(){const n=nt();paper(cx,W,W*RT,n.paper);pgc().strokes.forEach(s=>stroke(cx,s,W))}
-function setup(){cv=$('#cv');W=cv.clientWidth;const d=devicePixelRatio||1;cv.width=W*d;cv.height=W*RT*d;cv.style.height=W*RT+'px';
+function setup(){cv=$('#cv');cv.style.width=(S.zoom||1)*100+'%';W=cv.clientWidth;const d=Math.min(devicePixelRatio||1,Math.sqrt(12e6/(W*W*RT)));cv.width=W*d;cv.height=W*RT*d;cv.style.height='auto';cv.style.aspectRatio='1/'+RT;
 cx=cv.getContext('2d');cx.setTransform(d,0,0,d,0,0);cv.style.touchAction='none';redraw();
 const pos=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.width]};
 const erase=q=>{const n=pgc(),k=n.strokes.length;n.strokes=n.strokes.filter(s=>!s.p.some(a=>Math.hypot(a[0]-q[0],a[1]-q[1])<.03));if(n.strokes.length!==k)redraw()};
-cv.onpointerdown=e=>{e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(x){}if(e.pointerType==='touch'&&!S.finger){sc=e.clientY;return}sc=null;const q=pos(e);
+cv.onpointerdown=e=>{e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(x){}if(e.pointerType==='touch'&&!S.finger){pts[e.pointerId]=[e.clientX,e.clientY];sc=e.clientY;scx=e.clientX;const k=Object.keys(pts);if(k.length===2){const a=pts[k[0]],b=pts[k[1]];pz={d:Math.hypot(a[0]-b[0],a[1]-b[1])||1,z:S.zoom||1,n:0}}return}sc=null;const q=pos(e);
 if(S.tool==='erase'){dr='e';erase(q);return}dr={t:S.tool,c:S.ink,w:+S.size,p:[q]};pgc().strokes.push(dr);stroke(cx,dr,W)};
-cv.onpointermove=e=>{if(e.pointerType==='touch'&&!S.finger){if(sc!==null){scrollBy(0,sc-e.clientY);sc=e.clientY}return}if(!dr)return;e.preventDefault();const ev=e.getCoalescedEvents?e.getCoalescedEvents():[];for(const u of(ev.length?ev:[e])){const q=pos(u);if(dr==='e'){erase(q);continue}const l=dr.p[dr.p.length-1];dr.p.push(q);seg1(cx,dr,W,l,q)}};
-cv.onpointerup=cv.onpointercancel=cv.onlostpointercapture=()=>{if(dr)save();dr=null;sc=null};cv.oncontextmenu=e=>e.preventDefault()}
+cv.onpointermove=e=>{if(e.pointerType==='touch'&&!S.finger){if(pts[e.pointerId])pts[e.pointerId]=[e.clientX,e.clientY];const k=Object.keys(pts);if(k.length>=2&&pz){const a=pts[k[0]],b=pts[k[1]],z=Math.max(1,Math.min(2.5,pz.z*Math.hypot(a[0]-b[0],a[1]-b[1])/pz.d));pz.n=z;cv.style.width=z*100+'%'}else if(sc!==null&&k.length===1){scrollBy(0,sc-e.clientY);cv.parentNode.scrollLeft+=scx-e.clientX;sc=e.clientY;scx=e.clientX}return}if(!dr)return;e.preventDefault();const ev=e.getCoalescedEvents?e.getCoalescedEvents():[];for(const u of(ev.length?ev:[e])){const q=pos(u);if(dr==='e'){erase(q);continue}const l=dr.p[dr.p.length-1];dr.p.push(q);seg1(cx,dr,W,l,q)}};
+cv.onpointerup=cv.onpointercancel=cv.onlostpointercapture=e=>{delete pts[e.pointerId];if(pz&&Object.keys(pts).length<2){const dk=cv.parentNode,r=(dk.scrollLeft+dk.clientWidth/2)/dk.scrollWidth;if(pz.n){S.zoom=pz.n;save()}pz=null;setup();dk.scrollLeft=r*dk.scrollWidth-dk.clientWidth/2}if(dr)save();dr=null;sc=null};cv.oncontextmenu=e=>e.preventDefault()}
 const st=t=>{const e=$('#st');if(e)e.textContent=t};
 function conv(){st('Handwriting-to-text needs a server step we’ll add next. For now, write in the Text box with Apple Pencil and Scribble converts it.')}
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;
 const a=b.dataset.act,id=b.dataset.id,v=b.dataset.v,s=sp();
-if(a==='conv'){conv();return}if(a==='exp'){exp();return}if(a==='impb'){$('#imp').click();return}if(a==='syncnow'){doPush();syncPull();return}if(a==='guest'){guest=true;render();return}if(a==='signin'){guest=false;render();return}if(a==='signout'){sb&&sb.auth.signOut();return}if(a==='icsall'){icsSave([...allTasks().filter(x=>x.it.due&&!x.it.done).map(x=>({id:x.it.id,t:x.it.t,d:x.it.due,tm:'',r:'',rem:x.it.rem})),...S.events]);return}
+if(a==='conv'){conv();return}if(a==='exp'){exp();return}if(a==='impb'){$('#imp').click();return}if(a==='full'){full=!full;try{if(full&&document.documentElement.requestFullscreen)document.documentElement.requestFullscreen();else if(!full&&document.fullscreenElement)document.exitFullscreen()}catch(x){}render();return}if(a==='syncnow'){doPush();syncPull();return}if(a==='guest'){guest=true;render();return}if(a==='signin'){guest=false;render();return}if(a==='signout'){sb&&sb.auth.signOut();return}if(a==='icsall'){icsSave([...allTasks().filter(x=>x.it.due&&!x.it.done).map(x=>({id:x.it.id,t:x.it.t,d:x.it.due,tm:'',r:'',rem:x.it.rem})),...S.events]);return}
 if(a!=='dlist'&&a!=='nclear')sure=0;
 const l=isN()||isC()||isT()?null:cur();
 if(a==='space')S.space=id;
@@ -298,6 +312,7 @@ else if(a==='nnew'){const n={id:uid(),title:'New notebook',paper:'lined',pages:[
 else if(a==='paper')nt().paper=v;
 else if(a==='undo')pgc().strokes.pop();
 else if(a==='nclear'){if(sure!==2){sure=2;render();return}pgc().strokes=[];sure=0}
+else if(a==='zoom')S.zoom=Math.max(1,Math.min(2.5,(S.zoom||1)+(+v)));
 else if(a==='finger')S.finger=!S.finger;
 else if(a==='send'){const t=S.spaces.find(x=>x.id===snd.s).lists.find(x=>x.id===snd.l),n=nt();
 const ls=n.text.split('\n').map(x=>x.replace(/^\s*[-•*]\s*/,'').trim()).filter(Boolean);
@@ -333,6 +348,7 @@ document.addEventListener('input',e=>{const i=e.target.id;
 if(i==='c1'||i==='c2'){sp()[i==='c1'?'accent':'accent2']=e.target.value;save();theme()}
 if(i==='emoin'){const g=window.Intl&&Intl.Segmenter?[...new Intl.Segmenter().segment(e.target.value)].map(x=>x.segment)[0]:[...e.target.value][0];if(g){(isN()?nt():cur()).ic=g;save()}}if(i==='sq'){$('#sr').innerHTML=sres(e.target.value)}if(i==='ntitle'){nt().title=e.target.value;save()}if(i==='ntext'){nt().text=e.target.value;save()}});
 document.addEventListener('change',e=>{if(e.target.id==='imp'){const f=e.target.files[0];if(f)f.text().then(x=>{try{const o=JSON.parse(x);if(!o.spaces||!o.notes)throw 0;S=o;save();location.reload()}catch(er){$('#bk').textContent='That file isn’t a valid backup.'}})}if(e.target.id==='ss'){snd.s=e.target.value;snd.l='';render()}if(e.target.id==='sl')snd.l=e.target.value});
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&full){full=false;render()}});
 let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(isN()&&cv&&cv.isConnected&&cv.clientWidth!==W)setup()},200)});
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('.dh');if(!h)return;e.preventDefault();try{h.releasePointerCapture(e.pointerId)}catch(x){}
 const li=h.closest('[data-did]'),ul=li.parentNode,hz=ul.classList.contains('lists')&&getComputedStyle(ul).flexDirection==='row';li.classList.add('lift');
